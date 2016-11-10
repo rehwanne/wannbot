@@ -63,7 +63,7 @@ class PostHandler(BaseHTTPRequestHandler):
 
         if responsetext:
             data = {}
-            data['response_type'] = 'ephemeral'
+            data['response_type'] = 'in_channel'
             data['text'] = responsetext
             self.send_response(200)
             self.send_header("Content-type", "application/json")
