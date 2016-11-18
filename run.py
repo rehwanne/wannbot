@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: iso-8859-1 -*-
 
-from BaseHTTPServer import BaseHTTPRequestHandler
-import urlparse
+from http.server import BaseHTTPRequestHandler,HTTPServer
 import json
 import safygiphy
 giief = safygiphy.Giphy()
@@ -34,7 +33,7 @@ class PostHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Respond to a POST request."""
         length = int(self.headers['Content-Length'])
-        post_data = urlparse.parse_qs(self.rfile.read(length).decode('utf-8'))
+        post_data = urllib.parse_qs(self.rfile.read(length).decode('utf-8'))
 
         for key, value in post_data.iteritems():
             if key == 'response_url':
@@ -75,14 +74,13 @@ def getgif(text):
     search = ''.join(text).encode('latin1')
     jif = giief.random(tag=search)
     if jif['data']:
-        print(jif)
         return u'' +jif['data']['image_original_url'] + " " +search
     else:
-        return "gibts nicht"
+        return u"gibts nicht"
 
 
 if __name__ == '__main__':
-    from BaseHTTPServer import HTTPServer
+    from http.server  import HTTPServer
     server = HTTPServer((HOSTNAME, PORT), PostHandler)
     print('Starting matterslash server, use <Ctrl-C> to stop')
     server.serve_forever()
