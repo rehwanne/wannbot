@@ -106,6 +106,7 @@ def link_redmine(text):
                 else:
                     name = i.assigned_to.name
                 answer += "assigned to: " + name + "\n"
+            answer += "\n"
     return answer
 
 
