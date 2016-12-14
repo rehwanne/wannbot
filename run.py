@@ -86,26 +86,31 @@ def link_redmine(text):
         return "no issue IDs found"
     else:
         for issue in m:
-            answer += config.redmine_url + "issues/" + issue + "\n"
-            if redmine:
+            url = config.redmine_url + "issues/" + issue
+            if not redmine:
+                answer += url + "\n"
+            else:
+                answer += "| link | " + url + " | \n"
+                answer += "|:---:|:---:| \n"
                 try:
                     i = redmine.issue.get(issue)
                 except ResourceNotFoundError as e:
                     answer += "Can't find issue #" + issue + "\n"
                     traceback.print_exc(file=sys.stdout)
+                    answer += "\n"
                     continue
                 except:
                     answer += "Error retrieving issue #" + issue + "\n"
                     traceback.print_exc(file=sys.stdout)
+                    answer += "\n"
                     continue
-                    continue
-                answer += "subject: " + i.subject + "\n"
-                answer += "author: " + i.author.name + "\n"
+                answer += "| subject |" + i.subject + " | \n"
+                answer += "| author |" + i.author.name + "| \n"
                 if not hasattr(i, 'assigned_to'):
                     name = "Nobody"
                 else:
                     name = i.assigned_to.name
-                answer += "assigned to: " + name + "\n"
+                answer += "| assigned to |" + name + "| \n"
             answer += "\n"
     return answer
 
