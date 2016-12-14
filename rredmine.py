@@ -30,26 +30,26 @@ def link_redmine(mattermost_request):
             if not redmine:
                 answer += url + "\n"
             else:
-                answer += "| link | " + url + " | \n"
+                answer += "| link | {} | \n".format(url)
                 answer += "|:---:|:---:| \n"
                 try:
                     i = redmine.issue.get(issue)
                 except ResourceNotFoundError as e:
-                    answer += "Can't find issue #" + issue + "\n"
+                    answer += "| **ERROR** | Issue not found: #{} |\n".format(issue)
                     traceback.print_exc(file=sys.stdout)
                     answer += "\n"
                     continue
                 except:
-                    answer += "Error retrieving issue #" + issue + "\n"
+                    answer += "| **ERROR** | Unable to get data for issue: #{} |\n".format(issue)
                     traceback.print_exc(file=sys.stdout)
                     answer += "\n"
                     continue
-                answer += "| subject |" + i.subject + " | \n"
-                answer += "| author |" + i.author.name + "| \n"
+                answer += "| subject | {} | \n".format(i.subject)
+                answer += "| author | {} | \n".format(i.author.name)
                 if not hasattr(i, 'assigned_to'):
                     name = "Nobody"
                 else:
                     name = i.assigned_to.name
-                answer += "| assigned to |" + name + "| \n"
+                answer += "| assigned to | {} | \n".format(name)
             answer += "\n"
     return Response(answer)
