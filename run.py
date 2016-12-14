@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: iso-8859-1 -*-
 
 from BaseHTTPServer import BaseHTTPRequestHandler
@@ -9,6 +9,8 @@ giief = safygiphy.Giphy()
 
 HOSTNAME = 'localhost'
 PORT = 5000 
+
+REDMINE_URL="https://redmine.prae.me/"
 
 _u = lambda t: t.decode('UTF-8', 'replace') if isinstance(t, str) else t
 
@@ -34,32 +36,25 @@ class PostHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         """Respond to a POST request."""
         length = int(self.headers['Content-Length'])
-        post_data = urlparse.parse_qs(self.rfile.read(length).decode('utf-8'))
+        raw_data = self.rfile.read(length).decode('utf-8')
+        post_data = urlparse.parse_qs(raw_data)
+
+        mr = MattermostRequest()
 
         for key, value in post_data.iteritems():
-            if key == 'response_url':
-                MattermostRequest.response_url = value
-            elif key == 'text':
-                MattermostRequest.text = value
-            elif key == 'token':
-                MattermostRequest.token = value
-            elif key == 'channel_id':
-                MattermostRequest.channel_id = value
-            elif key == 'team_id':
-                MattermostRequest.team_id = value
-            elif key == 'command':
-                MattermostRequest.command = value
-            elif key == 'team_domain':
-                MattermostRequest.team_domain = value
-            elif key == 'user_name':
-                MattermostRequest.user_name = value
-            elif key == 'channel_name':
-                MattermostRequest.channel_name = value
+            print key
+            print value
+            setattr(mr, key, value)
 
         responsetext = ''
 
-        if MattermostRequest.command[0] == u'/gif':
-            responsetext = getgif(MattermostRequest.text)
+        if mr.command[0] == u'/gif':
+            responsetext = getgif(mr.text)
+        elif mr.command[0] == u'/link_redmine':
+            responsetext = link_redmine(mr.text)
+
+        print "##############"
+        print responsetext
 
         if responsetext:
             data = {}
@@ -79,6 +74,9 @@ def getgif(text):
         return u'' +jif['data']['image_original_url'] + " " +search
     else:
         return "gibts nicht"
+
+def link_redmine(text):
+    return REDMINE_URL + "issues/" + "".join(text).encode('latin1')
 
 
 if __name__ == '__main__':
