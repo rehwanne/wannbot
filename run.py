@@ -4,30 +4,43 @@
 from BaseHTTPServer import BaseHTTPRequestHandler
 import urlparse
 import json
-import safygiphy
 import re
 import sys
 import traceback
 
-giief = safygiphy.Giphy()
-
+import response
 import config
 
-if config.redmine_key:
-    from redmine import Redmine,ResourceNotFoundError
-    redmine = Redmine(config.redmine_url, key=config.redmine_key)
-else:
-    redmine = None
+# dictionary of handlers for enabled slash commands
+#handlers['\foo'] = some_function()
+handlers = dict()
 
-_u = lambda t: t.decode('UTF-8', 'replace') if isinstance(t, str) else t
+#########
+# Enable Handlers
+####
+if config.redmine_enable:
+    import rredmine
+    handlers[u"/link_redmine"] = rredmine.link_redmine
+
+if config.gif_enable:
+    import gif
+    handlers[u"/gif"] = gif.getgif
 
 
 class MattermostRequest(object):
     """
     This is what we get from Mattermost
     """
-    def __init__(self, response_url=None, text=None, token=None, channel_id=None, team_id=None, command=None,
-                 team_domain=None, user_name=None, channel_name=None):
+    def __init__(self,
+                 response_url=None,
+                 text=None,
+                 token=None,
+                 channel_id=None,
+                 team_id=None,
+                 command=None,
+                 team_domain=None,
+                 user_name=None,
+                 channel_name=None):
         self.response_url = response_url
         self.text = text
         self.token = token
@@ -38,81 +51,46 @@ class MattermostRequest(object):
         self.user_name = user_name
         self.channel_name = channel_name
 
+    def dispatch(self):
+        """ call handler for command """
+        global handlers
+        try:
+            c = self.command[0]
+        except KeyError:
+            print "Request didn't include a command"
+
+        try:
+            return handlers[c](self)
+        except KeyError as e:
+            print "No Handler for command: {}".format(c)
+            return ""
+
+
+
 
 class PostHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        """Respond to a POST request."""
+    def get_post_data(self):
         length = int(self.headers['Content-Length'])
         raw_data = self.rfile.read(length).decode('utf-8')
-        post_data = urlparse.parse_qs(raw_data)
+        return urlparse.parse_qs(raw_data)
 
+    def do_POST(self):
+        """Respond to a POST request."""
+
+        post_data = self.get_post_data()
+
+        # map post values onto Request
         mr = MattermostRequest()
-
         for key, value in post_data.iteritems():
             setattr(mr, key, value)
 
-        responsetext = ''
+        response = mr.dispatch()
 
-        if mr.command[0] == u'/gif':
-            responsetext = getgif(mr.text)
-        elif mr.command[0] == u'/link_redmine':
-            responsetext = link_redmine(mr.text)
-
-        if responsetext:
-            data = {}
-            data['response_type'] = 'in_channel'
-            data['text'] = responsetext
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(data))
-        return
-
-def getgif(text):
-    search = ''.join(text).encode('latin1')
-    jif = giief.random(tag=search)
-    if jif['data']:
-        return u'' +jif['data']['image_original_url'] + " " +search
-    else:
-        return "gibts nicht"
-
-def link_redmine(text):
-    answer = ""
-
-    text = ''.join(text).encode('latin1')
-
-    m = re.findall('#([0-9]+)', text)
-    if (len(m) < 1):
-        return "no issue IDs found"
-    else:
-        for issue in m:
-            url = config.redmine_url + "issues/" + issue
-            if not redmine:
-                answer += url + "\n"
-            else:
-                answer += "| link | " + url + " | \n"
-                answer += "|:---:|:---:| \n"
-                try:
-                    i = redmine.issue.get(issue)
-                except ResourceNotFoundError as e:
-                    answer += "Can't find issue #" + issue + "\n"
-                    traceback.print_exc(file=sys.stdout)
-                    answer += "\n"
-                    continue
-                except:
-                    answer += "Error retrieving issue #" + issue + "\n"
-                    traceback.print_exc(file=sys.stdout)
-                    answer += "\n"
-                    continue
-                answer += "| subject |" + i.subject + " | \n"
-                answer += "| author |" + i.author.name + "| \n"
-                if not hasattr(i, 'assigned_to'):
-                    name = "Nobody"
-                else:
-                    name = i.assigned_to.name
-                answer += "| assigned to |" + name + "| \n"
-            answer += "\n"
-    return answer
+        # send response to Mattermost
+        self.send_response(response.status)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(response.data))
 
 
 if __name__ == '__main__':
