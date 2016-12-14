@@ -9,7 +9,12 @@ import re
 giief = safygiphy.Giphy()
 
 import config
+from redmine import Redmine
 
+if config.redmine_key:
+    redmine = Redmine(config.redmine_url, key=config.redmine_key)
+else:
+    redmine = None
 
 _u = lambda t: t.decode('UTF-8', 'replace') if isinstance(t, str) else t
 
@@ -79,6 +84,15 @@ def link_redmine(text):
     else:
         for issue in m:
             answer += config.redmine_url + "issues/" + issue + "\n"
+            if redmine:
+                i = redmine.issue.get(issue)
+                answer += "subject: " + i.subject + "\n"
+                answer += "author: " + i.author.name + "\n"
+                if not hasattr(i, 'assigned_to'):
+                    name = "Nobody"
+                else:
+                    name = i.assigned_to.name
+                answer += "assigned to: " + name + "\n"
     return answer
 
 

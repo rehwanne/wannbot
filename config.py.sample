@@ -1,3 +1,6 @@
 hostname = 'localhost'
 port = 5000
 redmine_url = "https://redmine.org/"
+
+# set to None to disable fetching of issue data
+redmine_key = None
