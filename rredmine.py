@@ -44,12 +44,12 @@ def link_redmine(mattermost_request):
                     traceback.print_exc(file=sys.stdout)
                     answer += "\n"
                     continue
-                answer += "| subject | {} | \n".format(i.subject)
-                answer += "| author | {} | \n".format(i.author.name)
+                answer += "| subject | {} | \n".format(i.subject.encode('utf-8'))
+                answer += "| author | {} | \n".format(i.author.name.encode('utf-8'))
                 if not hasattr(i, 'assigned_to'):
                     name = "Nobody"
                 else:
-                    name = i.assigned_to.name
+                    name = i.assigned_to.name.encode('utf-8')
                 answer += "| assigned to | {} | \n".format(name)
             answer += "\n"
     return Response(answer)
