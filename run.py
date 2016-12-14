@@ -8,10 +8,8 @@ import safygiphy
 import re
 giief = safygiphy.Giphy()
 
-HOSTNAME = 'localhost'
-PORT = 5000 
+import config
 
-REDMINE_URL="https://redmine.prae.me/"
 
 _u = lambda t: t.decode('UTF-8', 'replace') if isinstance(t, str) else t
 
@@ -80,12 +78,12 @@ def link_redmine(text):
         return "no issue IDs found"
     else:
         for issue in m:
-            answer += REDMINE_URL + "issues/" + issue + "\n"
+            answer += config.redmine_url + "issues/" + issue + "\n"
     return answer
 
 
 if __name__ == '__main__':
     from BaseHTTPServer import HTTPServer
-    server = HTTPServer((HOSTNAME, PORT), PostHandler)
+    server = HTTPServer((config.hostname, config.port), PostHandler)
     print('Starting matterslash server, use <Ctrl-C> to stop')
     server.serve_forever()
