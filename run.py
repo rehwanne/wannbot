@@ -9,9 +9,9 @@ import re
 giief = safygiphy.Giphy()
 
 import config
-from redmine import Redmine
 
 if config.redmine_key:
+    from redmine import Redmine
     redmine = Redmine(config.redmine_url, key=config.redmine_key)
 else:
     redmine = None
