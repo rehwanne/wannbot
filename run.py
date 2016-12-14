@@ -5,6 +5,7 @@ from BaseHTTPServer import BaseHTTPRequestHandler
 import urlparse
 import json
 import safygiphy
+import re
 giief = safygiphy.Giphy()
 
 HOSTNAME = 'localhost'
@@ -42,8 +43,6 @@ class PostHandler(BaseHTTPRequestHandler):
         mr = MattermostRequest()
 
         for key, value in post_data.iteritems():
-            print key
-            print value
             setattr(mr, key, value)
 
         responsetext = ''
@@ -52,9 +51,6 @@ class PostHandler(BaseHTTPRequestHandler):
             responsetext = getgif(mr.text)
         elif mr.command[0] == u'/link_redmine':
             responsetext = link_redmine(mr.text)
-
-        print "##############"
-        print responsetext
 
         if responsetext:
             data = {}
@@ -70,13 +66,22 @@ def getgif(text):
     search = ''.join(text).encode('latin1')
     jif = giief.random(tag=search)
     if jif['data']:
-        print(jif)
         return u'' +jif['data']['image_original_url'] + " " +search
     else:
         return "gibts nicht"
 
 def link_redmine(text):
-    return REDMINE_URL + "issues/" + "".join(text).encode('latin1')
+    answer = ""
+
+    text = ''.join(text).encode('latin1')
+
+    m = re.findall('#([0-9]+)', text)
+    if (len(m) < 1):
+        return "no issue IDs found"
+    else:
+        for issue in m:
+            answer += REDMINE_URL + "issues/" + issue + "\n"
+    return answer
 
 
 if __name__ == '__main__':
