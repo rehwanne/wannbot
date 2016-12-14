@@ -6,12 +6,15 @@ import urlparse
 import json
 import safygiphy
 import re
+import sys
+import traceback
+
 giief = safygiphy.Giphy()
 
 import config
 
 if config.redmine_key:
-    from redmine import Redmine
+    from redmine import Redmine,ResourceNotFoundError
     redmine = Redmine(config.redmine_url, key=config.redmine_key)
 else:
     redmine = None
@@ -85,7 +88,17 @@ def link_redmine(text):
         for issue in m:
             answer += config.redmine_url + "issues/" + issue + "\n"
             if redmine:
-                i = redmine.issue.get(issue)
+                try:
+                    i = redmine.issue.get(issue)
+                except ResourceNotFoundError as e:
+                    answer += "Can't find issue #" + issue + "\n"
+                    traceback.print_exc(file=sys.stdout)
+                    continue
+                except:
+                    answer += "Error retrieving issue #" + issue + "\n"
+                    traceback.print_exc(file=sys.stdout)
+                    continue
+                    continue
                 answer += "subject: " + i.subject + "\n"
                 answer += "author: " + i.author.name + "\n"
                 if not hasattr(i, 'assigned_to'):
