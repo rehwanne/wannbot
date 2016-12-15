@@ -25,21 +25,23 @@ def handle(mattermost_request):
         return Response("Unknown command: " + command)
     return Response(func(arg))
 
-
 def issue(arg):
     arg = arg.strip()
     if len(arg) == 0:
         return "error: missing arguments"
 
-    if ' ' in arg:
-        (project, issue) = arg.split(' ')
-        issue = issue.lstrip('#')
-    else:
-        print arg
+    print arg
+    args = arg.split(' ')
+    if len(args) == 1:
         try:
             (project, issue) = re.search('([^/]+/[^/]+)/issues/(\d+)', arg).groups()
         except AttributeError:
             return "error: no url found"
+    elif len(args) == 2:
+        project = args[0]
+        issue = args[1]
+    else:
+        return "error: too many arguments"
 
     issue = int(issue)
     hub = github.Github()
