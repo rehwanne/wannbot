@@ -1,0 +1,9 @@
+hostname = 'localhost'
+port = 5000
+
+gif_enable = True
+
+redmine_enable = True
+redmine_url = "https://redmine.org/"
+# set to None to disable fetching of issue data
+redmine_key = None

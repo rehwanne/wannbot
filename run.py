@@ -1,24 +1,46 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 # -*- coding: iso-8859-1 -*-
 
 from BaseHTTPServer import BaseHTTPRequestHandler
 import urlparse
 import json
-import safygiphy
-giief = safygiphy.Giphy()
+import re
+import sys
+import traceback
 
-HOSTNAME = 'localhost'
-PORT = 5000 
+import response
+import config
 
-_u = lambda t: t.decode('UTF-8', 'replace') if isinstance(t, str) else t
+# dictionary of handlers for enabled slash commands
+#handlers['\foo'] = some_function()
+handlers = dict()
+
+#########
+# Enable Handlers
+####
+if config.redmine_enable:
+    import rredmine
+    handlers[u"/link_redmine"] = rredmine.link_redmine
+
+if config.gif_enable:
+    import gif
+    handlers[u"/gif"] = gif.getgif
 
 
 class MattermostRequest(object):
     """
     This is what we get from Mattermost
     """
-    def __init__(self, response_url=None, text=None, token=None, channel_id=None, team_id=None, command=None,
-                 team_domain=None, user_name=None, channel_name=None):
+    def __init__(self,
+                 response_url=None,
+                 text=None,
+                 token=None,
+                 channel_id=None,
+                 team_id=None,
+                 command=None,
+                 team_domain=None,
+                 user_name=None,
+                 channel_name=None):
         self.response_url = response_url
         self.text = text
         self.token = token
@@ -29,60 +51,50 @@ class MattermostRequest(object):
         self.user_name = user_name
         self.channel_name = channel_name
 
+    def dispatch(self):
+        """ call handler for command """
+        global handlers
+        try:
+            c = self.command[0]
+        except KeyError:
+            print "Request didn't include a command"
+
+        try:
+            return handlers[c](self)
+        except KeyError as e:
+            print "No Handler for command: {}".format(c)
+            return ""
+
+
+
 
 class PostHandler(BaseHTTPRequestHandler):
+    def get_post_data(self):
+        length = int(self.headers['Content-Length'])
+        raw_data = self.rfile.read(length).decode('utf-8')
+        return urlparse.parse_qs(raw_data)
+
     def do_POST(self):
         """Respond to a POST request."""
-        length = int(self.headers['Content-Length'])
-        post_data = urlparse.parse_qs(self.rfile.read(length).decode('utf-8'))
 
+        post_data = self.get_post_data()
+
+        # map post values onto Request
+        mr = MattermostRequest()
         for key, value in post_data.iteritems():
-            if key == 'response_url':
-                MattermostRequest.response_url = value
-            elif key == 'text':
-                MattermostRequest.text = value
-            elif key == 'token':
-                MattermostRequest.token = value
-            elif key == 'channel_id':
-                MattermostRequest.channel_id = value
-            elif key == 'team_id':
-                MattermostRequest.team_id = value
-            elif key == 'command':
-                MattermostRequest.command = value
-            elif key == 'team_domain':
-                MattermostRequest.team_domain = value
-            elif key == 'user_name':
-                MattermostRequest.user_name = value
-            elif key == 'channel_name':
-                MattermostRequest.channel_name = value
+            setattr(mr, key, value)
 
-        responsetext = ''
+        response = mr.dispatch()
 
-        if MattermostRequest.command[0] == u'/gif':
-            responsetext = getgif(MattermostRequest.text)
-
-        if responsetext:
-            data = {}
-            data['response_type'] = 'in_channel'
-            data['text'] = responsetext
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(data))
-        return
-
-def getgif(text):
-    search = ''.join(text).encode('latin1')
-    jif = giief.random(tag=search)
-    if jif['data']:
-        print(jif)
-        return u'' +jif['data']['image_original_url'] + " " +search
-    else:
-        return "gibts nicht"
+        # send response to Mattermost
+        self.send_response(response.status)
+        self.send_header("Content-type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(response.data))
 
 
 if __name__ == '__main__':
     from BaseHTTPServer import HTTPServer
-    server = HTTPServer((HOSTNAME, PORT), PostHandler)
+    server = HTTPServer((config.hostname, config.port), PostHandler)
     print('Starting matterslash server, use <Ctrl-C> to stop')
     server.serve_forever()
