@@ -26,6 +26,10 @@ if config.gif_enable:
     import gif
     handlers[config.gif_command] = gif.getgif
 
+if config.github_enable:
+    import ggithub
+    handlers[config.github_command] = ggithub.handle
+
 
 class MattermostRequest(object):
     """
