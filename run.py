@@ -20,11 +20,15 @@ handlers = dict()
 ####
 if config.redmine_enable:
     import rredmine
-    handlers[u"/link_redmine"] = rredmine.link_redmine
+    handlers[config.redmine_command] = rredmine.link_redmine
 
 if config.gif_enable:
     import gif
-    handlers[u"/gif"] = gif.getgif
+    handlers[config.gif_command] = gif.getgif
+
+if config.github_enable:
+    import ggithub
+    handlers[config.github_command] = ggithub.handle
 
 
 class MattermostRequest(object):
