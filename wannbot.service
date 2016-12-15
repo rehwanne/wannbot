@@ -1,0 +1,14 @@
+[Unit]
+Description=Botstuffs for Mattermost
+
+[Service]
+ExecStart=PATHTO/run.py
+User=USER
+WorkingDirectory=/PATHTO/wannbot/
+Restart=always
+RestartSec=10
+
+
+[Install]
+WantedBy=multi-user.target
+Alias=wannbot.service
