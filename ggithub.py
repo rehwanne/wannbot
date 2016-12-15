@@ -30,7 +30,6 @@ def issue(arg):
     if len(arg) == 0:
         return "error: missing arguments"
 
-    print arg
     args = arg.split(' ')
     if len(args) == 1:
         try:
