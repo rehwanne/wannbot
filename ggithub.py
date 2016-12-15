@@ -67,7 +67,7 @@ def issue(arg):
             labels += label.name + " "
         rows.append(["Labels", labels])
 
-    return tabulate(rows, header)
+    return tabulate(rows, header, tablefmt="pipe")
 
 
 commands['issue'] = issue
