@@ -51,5 +51,6 @@ def link_redmine(mattermost_request):
                 else:
                     name = i.assigned_to.name.encode('utf-8')
                 answer += "| assigned to | {} | \n".format(name)
+                answer += "| status | {} | \n".format(i.status.name.encode('utf-8'))
             answer += "\n"
     return Response(answer)
