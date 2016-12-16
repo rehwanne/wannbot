@@ -30,6 +30,10 @@ if config.github_enable:
     import ggithub
     handlers[config.github_command] = ggithub.handle
 
+if config.vote_enable:
+    import vote
+    handlers[config.vote_command] = vote.handle
+
 
 class MattermostRequest(object):
     """
@@ -96,9 +100,11 @@ class PostHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(response.data))
 
-
-if __name__ == '__main__':
+def main():
     from BaseHTTPServer import HTTPServer
     server = HTTPServer((config.hostname, config.port), PostHandler)
     print('Starting matterslash server, use <Ctrl-C> to stop')
     server.serve_forever()
+
+if __name__ == '__main__':
+    main()

@@ -1,31 +1,38 @@
 #!/usr/bin/env python2
 
-class VotingAlreadyStartedError(Exception):
+from tabulate import tabulate
+
+import config
+from response import Response
+
+class VotingException(Exception):
     pass
 
-class OptionNotFoundError(Exception):
+class VotingAlreadyStartedError(VotingException):
     pass
 
-class UserAlreadyVotedError(Exception):
+class OptionNotFoundError(VotingException):
     pass
 
-class NoActiveVotingError(Exception):
+class UserAlreadyVotedError(VotingException):
+    pass
+
+class NoActiveVotingError(VotingException):
+    pass
+
+class MissingArgumentsError(VotingException):
     pass
 
 class Option(object):
     def __init__(self, text, i):
         if len(text) <= 0:
-            raise ValueError("Option text can't be empty")
+            raise MissingArgumentsError("Option text can't be empty")
         self.text = text
         self.count = 0
-        self.voters = list()
         self.id = i
 
     def vote(self, voter):
         self.count += 1
-        if voter in self.voters:
-            raise UserAlreadyVotedError()
-        self.voters.append(voter)
 
 class Voting(object):
     STATE_PREPARING = 0
@@ -33,19 +40,22 @@ class Voting(object):
 
     def __init__(self, topic):
         if len(topic) <= 0:
-            raise ValueError("Topic can't be empty")
+            raise MissingArgumentsError("Topic needed")
         self.topic = topic
         self.state = Voting.STATE_PREPARING
         self.options = list()
+        self.voters = list()
 
     def add_option(self, text):
         if self.state > Voting.STATE_PREPARING:
-            raise VotingAlreadyStartedError()
-        self.options.append(Option(text, len(self.options)))
+            raise VotingAlreadyStartedError("Voting already started")
+        i = len(self.options) + 1
+        self.options.append(Option(text, i))
+        return i
 
     def start(self):
         if self.state > Voting.STATE_PREPARING:
-            raise VotingAlreadyStartedError()
+            raise VotingAlreadyStartedError("Voting already started")
         self.state = Voting.STATE_RUNNING
 
     def restart(self):
@@ -53,34 +63,20 @@ class Voting(object):
 
     def vote(self, option_number, voter):
         try:
-            option = self.options[option_number]
+            option = self.options[option_number - 1]
         except IndexError:
-            raise OptionNotFoundError("Option " + option_number + "not found")
+            raise OptionNotFoundError("Option {} not found".format(option_number))
+
+        if voter in self.voters:
+            raise UserAlreadyVotedError("User already voted")
+        self.voters.append(voter)
         option.vote(voter)
 
-    def __str__(self):
-        r = "**{}**\n".format(self.topic)
-
-        if len(self.options) == 0:
-            width = 0
-        else:
-            width = len(max(self.options, key=lambda x:len(x.text)).text)
-
-        width = max(width, len("Option"))
-        j = (width - len("Option")) / 2
-        print width
-
-        w = width
-        r += "|id  |" + "Option".ljust(w) + "|Votes|\n"
-        w = width - 2
-        print w
-        r += "|:--:|:" + "-"*w + ":|:" + "-"*3 + ":|\n"
-
+    def get_results(self):
+        results = []
         for o in self.options:
-            w = width
-            r += "|" + str(o.id).ljust(4) + "|" + o.text.ljust(w)+ "|" + str(o.count).ljust(5) + "|\n"
-
-        return r
+            results.append([o.id, o.text, o.count])
+        return results
 
 class VotingManager(object):
     def __init__(self):
@@ -90,7 +86,76 @@ class VotingManager(object):
         try:
             return self.votings[channel]
         except KeyError:
-            raise NoActiveVotingError()
+            raise NoActiveVotingError("No active voting")
 
     def new_voting(self, channel, topic):
         self.votings[channel] = Voting(topic)
+
+    def help(self):
+        return """"
+Start a new voting:
+{0} new topic
+
+add options to voting:
+{0} add name
+
+vote (users can only vote once):
+{0} vote #id
+
+show results:
+{0} show
+        """
+
+    def handle(self, request):
+        text = request.text[0].strip()
+        channel = request.channel_id[0].strip()
+        args = text.split(' ')
+
+        try:
+            if len(args) == 0 or args[0] == 'help':
+                return Response(self.help())
+
+            elif args[0] == 'new':
+                if len(args) < 2:
+                    raise MissingArgumentsError("Topic needed")
+                topic = ' '.join(args[1:])
+                self.new_voting(channel, topic)
+                return Response("Vote created")
+
+            elif args[0] == 'show' or args[0] == 'results':
+                v = self.get_voting(channel)
+                results = v.get_results()
+                return Response(tabulate(results, ["id", "Text", "Votes"]))
+
+            elif args[0] == 'add':
+                v = self.get_voting(channel)
+                if len(args) < 2:
+                    raise MissingArgumentsError("Name needed")
+                text = ' '.join(args[1:])
+                i = v.add_option(text)
+                return Response("Option \"{}\" with id {} added".format(text, i))
+
+            elif args[0] == 'vote':
+                v = self.get_voting(channel)
+                if len(args) < 2:
+                    raise MissingArgumentsError("what do you want to vote?")
+                try:
+                    i = int(args[1])
+                except ValueError:
+                    raise MissingArgumentsError("Thats not an option id")
+
+                v.vote(i, request.user_name[0])
+                return Response("Voted")
+
+        except VotingException as e:
+            return Response("Error: "+ str(e))
+
+
+        return Response("WAT?")
+
+
+vm = VotingManager()
+
+def handle(request):
+    global vm
+    return vm.handle(request)
