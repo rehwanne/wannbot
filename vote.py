@@ -92,7 +92,7 @@ class VotingManager(object):
         self.votings[channel] = Voting(topic)
 
     def help(self):
-        return """"
+        return """
 Start a new voting:
 {0} new topic
 
@@ -107,6 +107,9 @@ show results:
 """.format(config.vote_command)
 
     def handle(self, request):
+        if not request.text:
+            return Response(self.help())
+
         text = request.text[0].strip()
         channel = request.channel_id[0].strip()
         args = text.split(' ')
@@ -120,7 +123,7 @@ show results:
                     raise MissingArgumentsError("Topic needed")
                 topic = ' '.join(args[1:])
                 self.new_voting(channel, topic)
-                return Response("Vote created")
+                return Response("Vote \"{}\" created".format(topic))
 
             elif args[0] == 'show' or args[0] == 'results':
                 v = self.get_voting(channel)
@@ -151,7 +154,7 @@ show results:
             return Response("Error: "+ str(e))
 
 
-        return Response("WAT?")
+        return Response("Error: Unknown command: {}".format(args[0]))
 
 
 vm = VotingManager()
