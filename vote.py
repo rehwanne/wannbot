@@ -125,7 +125,7 @@ show results:
             elif args[0] == 'show' or args[0] == 'results':
                 v = self.get_voting(channel)
                 results = v.get_results()
-                return Response(tabulate(results, ["id", "Text", "Votes"]))
+                return Response(tabulate(results, ["id", "Text", "Votes"], tablefmt='pipe'))
 
             elif args[0] == 'add':
                 v = self.get_voting(channel)
