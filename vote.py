@@ -104,7 +104,7 @@ vote (users can only vote once):
 
 show results:
 {0} show
-        """
+""".format(config.vote_command)
 
     def handle(self, request):
         text = request.text[0].strip()
