@@ -12,3 +12,6 @@ redmine_key = None
 
 github_enable = True
 github_command = "/github"
+
+vote_enable = True
+vote_command = "/voting"
